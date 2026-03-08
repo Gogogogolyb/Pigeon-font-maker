@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Pixel Font Forge</title>
+    <!-- Пиксельные шрифты -->
+    <link href="https://fonts.googleapis.com/css?family=Press+Start+2P|VT323&display=swap" rel="stylesheet">
+    <!-- JSZip и FileSaver -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        body {
+            background: #7c7c7c;
+            font-family: 'VT323', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+        .pixel-container {
+            max-width: 1400px;
+            width: 100%;
+            background: #b0b0b0;
+            border: 4px solid #404040;
+            box-shadow: 8px 8px 0 #202020;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .pixel-header {
+            background: #404040;
+            color: #c0c0c0;
+            padding: 16px;
+            border: 2px solid #808080;
+            text-shadow: 2px 2px #202020;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            position: relative;
+        }
+        .header-text {
+            flex: 1;
+            min-width: 200px;
+        }
+        .header-text h1 {
+            font-size: clamp(16px, 4vw, 20px);
+            margin-bottom: 8px;
+            color: #ffffa0;
+        }
+        .header-text p {
+            font-family: 'VT323', monospace;
+            font-size: clamp(14px, 3vw, 18px);
+            color: #a0ffa0;
+        }
+        .mobile-menu-toggle {
+            background: #c0c0c0;
+            border: 2px solid #808080;
+            width: 48px;
+            height: 48px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: -2px -2px 0 #404040, 2px 2px 0 #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.1s;
+        }
+        .mobile-menu-toggle:active {
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
+            transform: translate(2px, 2px);
+        }
+        .pixel-main {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .pixel-sidebar {
+            width: 320px;
+            background: #909090;
+            border: 3px solid #606060;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: transform 0.3s ease-in-out;
+        }
+        .pixel-canvas-area {
+            flex: 1;
+            min-width: 300px;
+            background: #a0a0a0;
+            border: 3px solid #606060;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+        .preview-panel {
+            margin-top: 16px;
+            background: #c0c0c0;
+            border: 2px solid #808080;
+            padding: 12px;
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
+        }
+        .preview-panel h3 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            margin-bottom: 10px;
+            color: #202020;
+        }
+        .preview-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-end;
+            margin-bottom: 10px;
+        }
+        .preview-item {
+            text-align: center;
+        }
+        .preview-item canvas {
+            background: #a0a0a0;
+            border: 2px solid #606060;
+            image-rendering: crisp-edges;
+        }
+        .preview-label {
+            font-size: 14px;
+            margin-top: 4px;
+            color: #202020;
+        }
+        .text-preview {
+            background: #a0a0a0;
+            border: 2px solid #606060;
+            padding: 8px;
+            font-family: 'VT323', monospace;
+            font-size: 24px;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+        .pixel-block {
+            background: #c0c0c0;
+            border: 2px solid #808080;
+            padding: 12px;
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
+            transition: box-shadow 0.1s;
+        }
+        .pixel-block h3 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            margin-bottom: 12px;
+            color: #202020;
+            text-transform: uppercase;
+            border-bottom: 2px solid #808080;
+            padding-bottom: 4px;
+        }
+        .pixel-input, .pixel-textarea, .pixel-select {
+            background: #a0a0a0;
+            border: 2px solid #606060;
+            padding: 8px;
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            color: #202020;
+            width: 100%;
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
+            transition: background 0.1s, border-color 0.1s;
+        }
+        .pixel-input:focus, .pixel-textarea:focus {
+            outline: none;
+            background: #b0b0b0;
+            border-color: #ffff80;
+        }
+        .pixel-button {
+            background: #c0c0c0;
+            border: 2px solid #808080;
+            padding: 12px 16px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 11px;
+            color: #202020;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: -2px -2px 0 #404040, 2px 2px 0 #e0e0e0;
+            transition: all 0.1s ease;
+            image-rendering: pixelated;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.2;
+            white-space: nowrap;
+            min-height: 44px;
+        }
+        .pixel-button:hover {
+            background: #d0d0d0;
+            transform: translate(-1px, -1px);
+            box-shadow: -3px -3px 0 #404040, 3px 3px 0 #e0e0e0;
+        }
+        .pixel-button:active {
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
+            transform: translate(2px, 2px);
+        }
+        .pixel-button.primary {
+            background: #a0d0ff;
+            border-color: #6080ff;
+        }
+        .pixel-button.primary:hover {
+            background: #b0e0ff;
+        }
+        .pixel-button.danger {
+            background: #ffa0a0;
+            border-color: #ff6060;
+        }
+        .pixel-button.danger:hover {
+            background: #ffb0b0;
+        }
+        .pixel-zoom-bar button {
+            width: 48px;
+            height: 48px;
+            font-size: 24px;
+            padding: 0;
+        }
+        .pixel-char-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #a0a0a0;
+            border: 2px solid #606060;
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
+        }
+        .pixel-char-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid #808080;
+            cursor: pointer;
+            font-size: 20px;
+            transition: background 0.1s;
+        }
+        .pixel-char-item.selected {
+            background: #ffffa0;
+        }
+        .pixel-char-item:hover {
+            background: #d0d0d0;
+        }
+        .pixel-badge {
+            background: #404040;
+            color: #c0c0c0;
+            padding: 4px 10px;
+            font-size: 14px;
+        }
+        .pixel-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .pixel-row > * {
+            flex: 1 1 120px;
+        }
+        .pixel-slider {
+            width: 100%;
+            margin: 8px 0;
+        }
+        .canvas-wrapper {
+            width: 100%;
+            height: 400px;
+            overflow: auto;
+            border: 3px solid #606060;
+            background: #808080;
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #c0c0c0;
+            cursor: default;
+        }
+        .canvas-wrapper.panning {
+            cursor: grabbing;
+        }
+        #imageCanvas {
+            display: block;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+        }
+        .pixel-zoom-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .pixel-stats {
+            background: #a0a0a0;
+            border: 2px solid #606060;
+            padding: 12px;
+            font-size: 16px;
+            color: #202020;
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
+        }
+        /* Анимации для мобильного меню */
+        @media (max-width: 768px) {
+            .pixel-sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: 280px;
+                z-index: 1000;
+                transform: translateX(-100%);
+                overflow-y: auto;
+                transition: transform 0.3s ease-in-out;
+                background: #909090;
+                border-right: 3px solid #404040;
+            }
+            .pixel-sidebar.open {
+                transform: translateX(0);
+            }
+            body.menu-open::after {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 999;
+                animation: fadeIn 0.2s;
+            }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        /* Подсказки */
+        [data-tooltip] {
+            position: relative;
+        }
+        [data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #404040;
+            color: #c0c0c0;
+            padding: 4px 8px;
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+            white-space: nowrap;
+            border: 2px solid #808080;
+            box-shadow: 2px 2px 0 #202020;
+            z-index: 10000;
+            pointer-events: none;
+        }
+        /* Тосты */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #404040;
+            color: #c0c0c0;
+            border: 2px solid #808080;
+            padding: 12px 20px;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            box-shadow: 4px 4px 0 #202020;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="pixel-container">
+        <div class="pixel-header">
+            <div class="header-text">
+                <h1>🖥️ PIXEL FONT FORGE</h1>
+                <p>превращаем пиксельные картинки в настоящие шрифты</p>
+            </div>
+            <div class="mobile-menu-toggle" id="menuToggle" data-tooltip="Меню">☰</div>
+        </div>
+        <div class="pixel-main">
+            <!-- Левая панель (управление) -->
+            <div class="pixel-sidebar" id="sidebar">
+                <div class="pixel-block">
+                    <h3>📁 1. Загрузить спрайт</h3>
+                    <input type="file" id="imageUpload" accept="image/png, image/bmp, image/gif, image/jpeg" class="pixel-input">
+                    <p style="margin-top:6px; font-size:14px;">PNG, BMP, GIF</p>
+                </div>
+                <div class="pixel-block">
+                    <h3>🔣 2. Символы</h3>
+                    <div class="pixel-row">
+                        <input type="text" id="charInput" maxlength="1" placeholder="A" class="pixel-input">
+                        <button class="pixel-button" id="addCharBtn" data-tooltip="Добавить символ">➕</button>
+                    </div>
+                    <div class="pixel-char-list" id="charList"></div>
+                    <p style="margin-top:4px; font-size:12px;">Кликните символ → выделите область</p>
+                </div>
+                <div class="pixel-block">
+                    <h3>⚙️ 3. Пиксельные настройки</h3>
+                    <label>Порог яркости:</label>
+                    <input type="range" id="thresholdSlider" min="0" max="255" value="128" class="pixel-slider">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>0</span>
+                        <span id="thresholdValue">128</span>
+                        <span>255</span>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <label>Удаление шумов:</label>
+                        <input type="number" id="turdsize" min="0" max="20" value="2" class="pixel-input">
+                    </div>
+                    <div style="margin-top:12px;">
+                        <label>Моноширинный:</label>
+                        <select id="monospaced" class="pixel-select">
+                            <option value="auto">Авто</option>
+                            <option value="fixed">Фиксированный</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="pixel-block">
+                    <h3>📐 4. Размер глифа</h3>
+                    <div class="pixel-row">
+                        <input type="number" id="outWidth" value="64" min="8" class="pixel-input">
+                        <span style="font-size:24px;">x</span>
+                        <input type="number" id="outHeight" value="64" min="8" class="pixel-input">
+                    </div>
+                    <button class="pixel-button" id="setSizeBtn" style="width:100%;" data-tooltip="Применить размер">Применить</button>
+                </div>
+                <div class="pixel-block">
+                    <h3>🏷️ 5. Имя шрифта</h3>
+                    <input type="text" id="fontName" value="PixelFont" class="pixel-input">
+                </div>
+                <div class="pixel-block">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="pixel-button primary" id="exportTtfBtn" style="flex:2;" data-tooltip="Создать TTF шрифт">✨ СОЗДАТЬ TTF</button>
+                        <button class="pixel-button" id="saveConfigBtn" data-tooltip="Сохранить конфигурацию">💾</button>
+                        <button class="pixel-button" id="loadConfigBtn" data-tooltip="Загрузить конфигурацию">📂</button>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button class="pixel-button danger" id="clearAllBtn" data-tooltip="Очистить всё">🗑 Очистить</button>
+                    </div>
+                </div>
+                <div class="pixel-stats" id="infoPanel">
+                    Загрузите изображение
+                </div>
+            </div>
+
+            <!-- Правая панель (холст и предпросмотр) -->
+            <div class="pixel-canvas-area">
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <canvas id="imageCanvas"></canvas>
+                </div>
+                <div class="pixel-zoom-bar">
+                    <button class="pixel-button" id="zoomInBtn" data-tooltip="Увеличить">+</button>
+                    <button class="pixel-button" id="zoomOutBtn" data-tooltip="Уменьшить">-</button>
+                    <button class="pixel-button" id="resetZoomBtn" data-tooltip="Сбросить масштаб">⟲</button>
+                    <span id="zoomPercent">100%</span>
+                </div>
+
+                <!-- Улучшенный предпросмотр -->
+                <div class="preview-panel">
+                    <h3>🔍 ПРЕДПРОСМОТР</h3>
+                    <div class="preview-row">
+                        <div class="preview-item">
+                            <div id="previewPixel" style="background:#a0a0a0; border:2px solid #606060;"></div>
+                            <div class="preview-label">Пиксельная сетка</div>
+                        </div>
+                        <div class="preview-item">
+                            <canvas id="previewGlyph" width="64" height="64" style="width:64px; height:64px;"></canvas>
+                            <div class="preview-label">Выходной глиф (64x64)</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Предпросмотр текста:</label>
+                        <input type="text" id="previewText" value="ABC 123" class="pixel-input" style="margin-bottom:5px;">
+                        <div id="textPreviewCanvas" class="text-preview" style="min-height: 64px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Тосты -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        (function() {
+            // Элементы
+            const canvas = document.getElementById('imageCanvas');
+            const ctx = canvas.getContext('2d');
+            const wrapper = document.getElementById('canvasWrapper');
+            const toastEl = document.getElementById('toast');
+
+            // Состояние
+            let originalImage = null;
+            let imageLoaded = false;
+            let zoom = 1.0;
+            let charRects = {};
+            let selectedChar = null;
+            let outputSize = { w: 64, h: 64 };
+            let isDrawing = false;
+            let startX = 0, startY = 0;
+            let currentRect = null;
+            let isPanning = false;
+            let panStartX = 0, panStartY = 0;
+            let scrollStartLeft = 0, scrollStartTop = 0;
+            let spacePressed = false;
+            let redrawScheduled = false;
+
+            // DOM элементы для параметров
+            const thresholdSlider = document.getElementById('thresholdSlider');
+            const thresholdValue = document.getElementById('thresholdValue');
+            const turdsizeInput = document.getElementById('turdsize');
+            const monospacedSelect = document.getElementById('monospaced');
+            const fontNameInput = document.getElementById('fontName');
+            const outWidthInput = document.getElementById('outWidth');
+            const outHeightInput = document.getElementById('outHeight');
+            const previewTextInput = document.getElementById('previewText');
+
+            // ========== Функции ==========
+            function showToast(message, duration = 3000) {
+                toastEl.textContent = message;
+                toastEl.classList.add('show');
+                setTimeout(() => {
+                    toastEl.classList.remove('show');
+                }, duration);
+            }
+
+            // Сохранение состояния в localStorage
+            function saveToLocalStorage() {
+                try {
+                    const state = {
+                        image: originalImage ? originalImage.src : null,
+                        charRects: charRects,
+                        outputSize: outputSize,
+                        selectedChar: selectedChar,
+                        threshold: thresholdSlider.value,
+                        turdsize: turdsizeInput.value,
+                        monospaced: monospacedSelect.value,
+                        fontName: fontNameInput.value,
+                        previewText: previewTextInput.value,
+                        zoom: zoom
+                    };
+                    localStorage.setItem('pixelFontForge', JSON.stringify(state));
+                } catch (e) {
+                    console.warn('Failed to save state:', e);
+                }
+            }
+
+            // Загрузка состояния из localStorage
+            function loadFromLocalStorage() {
+                try {
+                    const saved = localStorage.getItem('pixelFontForge');
+                    if (!saved) return false;
+
+                    const state = JSON.parse(saved);
+                    if (state.image) {
+                        // Загружаем изображение
+                        const img = new Image();
+                        img.onload = () => {
+                            originalImage = img;
+                            imageLoaded = true;
+
+                            // Восстанавливаем остальные параметры
+                            charRects = state.charRects || {};
+                            outputSize = state.outputSize || { w: 64, h: 64 };
+                            selectedChar = state.selectedChar || null;
+                            thresholdSlider.value = state.threshold || 128;
+                            turdsizeInput.value = state.turdsize || 2;
+                            monospacedSelect.value = state.monospaced || 'auto';
+                            fontNameInput.value = state.fontName || 'PixelFont';
+                            previewTextInput.value = state.previewText || 'ABC 123';
+                            zoom = state.zoom || 1.0;
+
+                            outWidthInput.value = outputSize.w;
+                            outHeightInput.value = outputSize.h;
+
+                            thresholdValue.textContent = thresholdSlider.value;
+
+                            resizeCanvas();
+                            renderCharList();
+                            updateInfo();
+                            updatePreviews();
+                            updateTextPreview();
+                            scheduleRedraw();
+
+                            showToast('✅ Состояние восстановлено');
+                        };
+                        img.src = state.image;
+                        return true;
+                    }
+                } catch (e) {
+                    console.warn('Failed to load state:', e);
+                }
+                return false;
+            }
+
+            // Очистка localStorage (при clearAll)
+            function clearLocalStorage() {
+                localStorage.removeItem('pixelFontForge');
+            }
+
+            // Обёртка для сохранения при любых изменениях
+            function withSave(fn) {
+                return function(...args) {
+                    const result = fn.apply(this, args);
+                    saveToLocalStorage();
+                    return result;
+                };
+            }
+
+            function scheduleRedraw() {
+                if (!redrawScheduled) {
+                    redrawScheduled = true;
+                    requestAnimationFrame(() => {
+                        redrawCanvas();
+                        redrawScheduled = false;
+                    });
+                }
+            }
+
+            function resizeCanvas() {
+                if (!originalImage) return;
+                canvas.width = originalImage.width * zoom;
+                canvas.height = originalImage.height * zoom;
+                scheduleRedraw();
+            }
+
+            function redrawCanvas() {
+                if (!originalImage || !imageLoaded) return;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+
+                ctx.strokeStyle = '#ff4444';
+                ctx.lineWidth = 2;
+                ctx.font = 'bold 14px "VT323", monospace';
+                ctx.fillStyle = '#ff4444';
+
+                for (const [ch, rect] of Object.entries(charRects)) {
+                    if (!rect) continue;
+                    const x = rect.x * zoom;
+                    const y = rect.y * zoom;
+                    const w = rect.width * zoom;
+                    const h = rect.height * zoom;
+                    ctx.strokeRect(x, y, w, h);
+                    ctx.fillText(ch, x + 4, y + 20);
+                }
+
+                if (isDrawing && currentRect) {
+                    ctx.strokeStyle = '#00aaff';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([6, 4]);
+                    ctx.strokeRect(currentRect.x, currentRect.y, currentRect.w, currentRect.h);
+                    ctx.setLineDash([]);
+                }
+            }
+
+            function getEventCoords(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scrollLeft = wrapper.scrollLeft;
+                const scrollTop = wrapper.scrollTop;
+                let clientX, clientY;
+                if (e.touches) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                const mouseCanvasX = (clientX - rect.left + scrollLeft);
+                const mouseCanvasY = (clientY - rect.top + scrollTop);
+                const imgX = mouseCanvasX / zoom;
+                const imgY = mouseCanvasY / zoom;
+                return { imgX, imgY, canvasX: mouseCanvasX, canvasY: mouseCanvasY };
+            }
+
+            function handlePointerDown(e) {
+                if (!imageLoaded) return;
+                e.preventDefault();
+
+                if (spacePressed || (e.button === 1)) {
+                    isPanning = true;
+                    wrapper.classList.add('panning');
+                    const { canvasX, canvasY } = getEventCoords(e);
+                    panStartX = canvasX;
+                    panStartY = canvasY;
+                    scrollStartLeft = wrapper.scrollLeft;
+                    scrollStartTop = wrapper.scrollTop;
+                    return;
+                }
+
+                if (e.button === 0 && selectedChar) {
+                    const { imgX, imgY, canvasX, canvasY } = getEventCoords(e);
+                    isDrawing = true;
+                    startX = Math.round(imgX);
+                    startY = Math.round(imgY);
+                    currentRect = { x: canvasX, y: canvasY, w: 0, h: 0 };
+                }
+            }
+
+            function handlePointerMove(e) {
+                if (!imageLoaded) return;
+                e.preventDefault();
+
+                if (isPanning) {
+                    const { canvasX, canvasY } = getEventCoords(e);
+                    const dx = canvasX - panStartX;
+                    const dy = canvasY - panStartY;
+                    wrapper.scrollLeft = scrollStartLeft - dx;
+                    wrapper.scrollTop = scrollStartTop - dy;
+                    return;
+                }
+
+                if (!isDrawing || !selectedChar) return;
+                const { imgX, imgY } = getEventCoords(e);
+                const currentImgX = Math.round(imgX);
+                const currentImgY = Math.round(imgY);
+                const canvasStartX = startX * zoom;
+                const canvasStartY = startY * zoom;
+                const canvasCurrentX = currentImgX * zoom;
+                const canvasCurrentY = currentImgY * zoom;
+                const x = Math.min(canvasStartX, canvasCurrentX);
+                const y = Math.min(canvasStartY, canvasCurrentY);
+                const w = Math.abs(canvasCurrentX - canvasStartX);
+                const h = Math.abs(canvasCurrentY - canvasStartY);
+                currentRect = { x, y, w, h };
+                scheduleRedraw();
+            }
+
+            function handlePointerUp(e) {
+                e.preventDefault();
+                if (isPanning) {
+                    isPanning = false;
+                    wrapper.classList.remove('panning');
+                    return;
+                }
+
+                if (!isDrawing || !selectedChar) return;
+                isDrawing = false;
+                const { imgX, imgY } = getEventCoords(e);
+                const endX = Math.round(imgX);
+                const endY = Math.round(imgY);
+                const x1 = Math.min(startX, endX);
+                const y1 = Math.min(startY, endY);
+                const x2 = Math.max(startX, endX);
+                const y2 = Math.max(startY, endY);
+                const w = x2 - x1;
+                const h = y2 - y1;
+                if (w > 1 && h > 1) {
+                    charRects[selectedChar] = { x: x1, y: y1, width: w, height: h };
+                    renderCharList();
+                    updateInfo();
+                    updatePreviews();
+                    saveToLocalStorage(); // сохраняем
+                }
+                currentRect = null;
+                scheduleRedraw();
+            }
+
+            canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+            canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
+            canvas.addEventListener('touchend', handlePointerUp);
+            canvas.addEventListener('touchcancel', handlePointerUp);
+            canvas.addEventListener('mousedown', handlePointerDown);
+            canvas.addEventListener('mousemove', handlePointerMove);
+            canvas.addEventListener('mouseup', handlePointerUp);
+            canvas.addEventListener('mouseleave', () => {
+                if (isDrawing) {
+                    isDrawing = false;
+                    currentRect = null;
+                    scheduleRedraw();
+                }
+                if (isPanning) {
+                    isPanning = false;
+                    wrapper.classList.remove('panning');
+                }
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') {
+                    spacePressed = true;
+                    wrapper.style.cursor = 'grab';
+                    e.preventDefault();
+                }
+            });
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'Space') {
+                    spacePressed = false;
+                    wrapper.style.cursor = 'default';
+                    e.preventDefault();
+                }
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.2 : 0.2;
+                zoom = Math.max(0.2, Math.min(20, zoom + delta));
+                resizeCanvas();
+                document.getElementById('zoomPercent').innerText = Math.round(zoom * 100) + '%';
+                saveToLocalStorage();
+            });
+
+            document.getElementById('zoomInBtn').addEventListener('click', () => {
+                zoom = Math.min(20, zoom + 0.2);
+                resizeCanvas();
+                document.getElementById('zoomPercent').innerText = Math.round(zoom * 100) + '%';
+                saveToLocalStorage();
+            });
+
+            document.getElementById('zoomOutBtn').addEventListener('click', () => {
+                zoom = Math.max(0.2, zoom - 0.2);
+                resizeCanvas();
+                document.getElementById('zoomPercent').innerText = Math.round(zoom * 100) + '%';
+                saveToLocalStorage();
+            });
+
+            document.getElementById('resetZoomBtn').addEventListener('click', () => {
+                zoom = 1.0;
+                resizeCanvas();
+                document.getElementById('zoomPercent').innerText = '100%';
+                saveToLocalStorage();
+            });
+
+            document.getElementById('imageUpload').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        originalImage = img;
+                        imageLoaded = true;
+                        resizeCanvas();
+                        updateInfo();
+                        updatePreviews();
+                        updateTextPreview();
+                        saveToLocalStorage();
+                        showToast('✅ Изображение загружено');
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+
+            function renderCharList() {
+                const container = document.getElementById('charList');
+                container.innerHTML = '';
+                const sorted = Object.keys(charRects).sort();
+                for (let ch of sorted) {
+                    const div = document.createElement('div');
+                    div.className = 'pixel-char-item' + (selectedChar === ch ? ' selected' : '');
+                    div.innerHTML = `
+                        <span style="font-weight:600;">${ch}</span>
+                        <span class="pixel-badge">${charRects[ch] ? '✓' : '✗'}</span>
+                    `;
+                    const delBtn = document.createElement('button');
+                    delBtn.innerHTML = '✕';
+                    delBtn.style.background = 'transparent';
+                    delBtn.style.border = 'none';
+                    delBtn.style.fontSize = '20px';
+                    delBtn.style.cursor = 'pointer';
+                    delBtn.style.color = '#800';
+                    delBtn.style.padding = '0 8px';
+                    delBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        delete charRects[ch];
+                        if (selectedChar === ch) selectedChar = null;
+                        renderCharList();
+                        scheduleRedraw();
+                        updateInfo();
+                        updatePreviews();
+                        saveToLocalStorage();
+                    };
+                    div.appendChild(delBtn);
+                    div.onclick = () => {
+                        selectedChar = ch;
+                        renderCharList();
+                        updateInfo();
+                        updatePreviews();
+                        saveToLocalStorage();
+                    };
+                    container.appendChild(div);
+                }
+            }
+
+            document.getElementById('addCharBtn').addEventListener('click', () => {
+                const inp = document.getElementById('charInput');
+                let ch = inp.value.trim();
+                if (!ch) { alert('Введите символ'); return; }
+                ch = ch[0];
+                if (charRects.hasOwnProperty(ch)) { alert('Символ уже есть'); return; }
+                charRects[ch] = null;
+                renderCharList();
+                selectedChar = ch;
+                renderCharList();
+                inp.value = '';
+                updateInfo();
+                updatePreviews();
+                saveToLocalStorage();
+            });
+
+            thresholdSlider.addEventListener('input', () => {
+                thresholdValue.textContent = thresholdSlider.value;
+                saveToLocalStorage();
+            });
+
+            document.getElementById('setSizeBtn').addEventListener('click', () => {
+                const w = parseInt(outWidthInput.value);
+                const h = parseInt(outHeightInput.value);
+                if (w > 0 && h > 0) {
+                    outputSize = { w, h };
+                    document.getElementById('previewGlyph').width = outputSize.w;
+                    document.getElementById('previewGlyph').height = outputSize.h;
+                    updateInfo();
+                    updatePreviews();
+                    saveToLocalStorage();
+                } else alert('Некорректный размер');
+            });
+
+            function updateInfo() {
+                const info = document.getElementById('infoPanel');
+                let text = `<b>Изображение:</b> ${originalImage ? originalImage.width + '×' + originalImage.height : 'не загружено'}<br>`;
+                text += `<b>Символов:</b> ${Object.keys(charRects).length}<br>`;
+                text += `<b>Выбран:</b> ${selectedChar || '—'}<br>`;
+                if (selectedChar && charRects[selectedChar]) {
+                    const r = charRects[selectedChar];
+                    text += `<b>Область:</b> (${Math.round(r.x)}, ${Math.round(r.y)}) ${Math.round(r.width)}×${Math.round(r.height)}<br>`;
+                }
+                text += `<b>Выходной размер:</b> ${outputSize.w}×${outputSize.h}`;
+                info.innerHTML = text;
+            }
+
+            function updatePreviews() {
+                if (!selectedChar || !charRects[selectedChar] || !originalImage) {
+                    document.getElementById('previewPixel').innerHTML = '';
+                    const previewGlyph = document.getElementById('previewGlyph').getContext('2d');
+                    previewGlyph.clearRect(0,0,outputSize.w,outputSize.h);
+                    return;
+                }
+                const rect = charRects[selectedChar];
+                const scale = 8;
+                const pixelDiv = document.getElementById('previewPixel');
+                pixelDiv.innerHTML = '';
+                const pixelCanvas = document.createElement('canvas');
+                pixelCanvas.width = rect.width * scale;
+                pixelCanvas.height = rect.height * scale;
+                pixelCanvas.style.width = (rect.width * scale) + 'px';
+                pixelCanvas.style.height = (rect.height * scale) + 'px';
+                const pctx = pixelCanvas.getContext('2d');
+                pctx.imageSmoothingEnabled = false;
+                pctx.drawImage(originalImage, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width * scale, rect.height * scale);
+                pctx.strokeStyle = '#404040';
+                pctx.lineWidth = 1;
+                for (let i = 0; i <= rect.width; i++) {
+                    pctx.beginPath();
+                    pctx.moveTo(i * scale, 0);
+                    pctx.lineTo(i * scale, rect.height * scale);
+                    pctx.stroke();
+                }
+                for (let i = 0; i <= rect.height; i++) {
+                    pctx.beginPath();
+                    pctx.moveTo(0, i * scale);
+                    pctx.lineTo(rect.width * scale, i * scale);
+                    pctx.stroke();
+                }
+                pixelDiv.appendChild(pixelCanvas);
+
+                const glyphCanvas = document.getElementById('previewGlyph');
+                glyphCanvas.width = outputSize.w;
+                glyphCanvas.height = outputSize.h;
+                const gctx = glyphCanvas.getContext('2d');
+                gctx.clearRect(0, 0, outputSize.w, outputSize.h);
+                gctx.imageSmoothingEnabled = false;
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = rect.width;
+                tempCanvas.height = rect.height;
+                const tctx = tempCanvas.getContext('2d');
+                tctx.drawImage(originalImage, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
+                const pasteX = Math.floor((outputSize.w - rect.width) / 2);
+                const pasteY = Math.floor((outputSize.h - rect.height) / 2);
+                gctx.drawImage(tempCanvas, pasteX, pasteY);
+            }
+
+            function updateTextPreview() {
+                const text = previewTextInput.value;
+                const container = document.getElementById('textPreviewCanvas');
+                container.innerHTML = '';
+                const canvas = document.createElement('canvas');
+                canvas.width = 800;
+                canvas.height = outputSize.h + 20;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                ctx.fillStyle = '#a0a0a0';
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+                let x = 10;
+                for (let ch of text) {
+                    if (charRects[ch] && originalImage) {
+                        const rect = charRects[ch];
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = rect.width;
+                        tempCanvas.height = rect.height;
+                        const tctx = tempCanvas.getContext('2d');
+                        tctx.drawImage(originalImage, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
+                        ctx.drawImage(tempCanvas, x, 10);
+                        x += rect.width + 2;
+                    } else {
+                        ctx.fillStyle = '#ff6060';
+                        ctx.fillRect(x, 10, 20, 20);
+                        ctx.fillStyle = '#a0a0a0';
+                        x += 22;
+                    }
+                    if (x > 780) break;
+                }
+                container.appendChild(canvas);
+            }
+
+            previewTextInput.addEventListener('input', () => {
+                updateTextPreview();
+                saveToLocalStorage();
+            });
+
+            // Сохраняем при изменении параметров (через input)
+            turdsizeInput.addEventListener('input', saveToLocalStorage);
+            monospacedSelect.addEventListener('change', saveToLocalStorage);
+            fontNameInput.addEventListener('input', saveToLocalStorage);
+
+            // Мобильное меню
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const body = document.body;
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                body.classList.toggle('menu-open');
+            });
+            body.addEventListener('click', (e) => {
+                if (body.classList.contains('menu-open') && !sidebar.contains(e.target) && e.target !== menuToggle) {
+                    sidebar.classList.remove('open');
+                    body.classList.remove('menu-open');
+                }
+            });
+
+            document.getElementById('saveConfigBtn').addEventListener('click', () => {
+                if (!originalImage) { alert('Нет изображения'); return; }
+                const config = {
+                    image: originalImage.src,
+                    outputSize: outputSize,
+                    chars: charRects,
+                    threshold: thresholdSlider.value,
+                    turdsize: turdsizeInput.value,
+                    monospaced: monospacedSelect.value
+                };
+                const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+                saveAs(blob, 'pixel_font_config.json');
+            });
+
+            document.getElementById('loadConfigBtn').addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'application/json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const config = JSON.parse(event.target.result);
+                            if (config.image) {
+                                const img = new Image();
+                                img.onload = () => {
+                                    originalImage = img;
+                                    imageLoaded = true;
+                                    resizeCanvas();
+                                    charRects = config.chars || {};
+                                    outputSize = config.outputSize || { w: 64, h: 64 };
+                                    outWidthInput.value = outputSize.w;
+                                    outHeightInput.value = outputSize.h;
+                                    document.getElementById('previewGlyph').width = outputSize.w;
+                                    document.getElementById('previewGlyph').height = outputSize.h;
+                                    if (config.threshold) thresholdSlider.value = config.threshold;
+                                    if (config.turdsize) turdsizeInput.value = config.turdsize;
+                                    if (config.monospaced) monospacedSelect.value = config.monospaced;
+                                    thresholdValue.textContent = thresholdSlider.value;
+                                    selectedChar = null;
+                                    renderCharList();
+                                    scheduleRedraw();
+                                    updateInfo();
+                                    updatePreviews();
+                                    updateTextPreview();
+                                    saveToLocalStorage();
+                                    showToast('✅ Конфигурация загружена');
+                                };
+                                img.src = config.image;
+                            } else alert('Конфигурация не содержит изображения');
+                        } catch (err) { alert('Ошибка парсинга JSON'); }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            });
+
+            document.getElementById('clearAllBtn').addEventListener('click', () => {
+                if (confirm('Очистить все символы?')) {
+                    charRects = {};
+                    selectedChar = null;
+                    renderCharList();
+                    scheduleRedraw();
+                    updateInfo();
+                    updatePreviews();
+                    updateTextPreview();
+                    clearLocalStorage();
+                    showToast('🗑 Всё очищено');
+                }
+            });
+
+            document.getElementById('exportTtfBtn').addEventListener('click', async () => {
+                if (!originalImage || Object.keys(charRects).length === 0) {
+                    alert('Сначала загрузите изображение и выделите символы');
+                    return;
+                }
+                const fontname = fontNameInput.value.trim() || 'PixelFont';
+                const rectsData = {};
+                for (let [ch, rect] of Object.entries(charRects)) {
+                    if (rect) rectsData[ch] = rect;
+                }
+                if (Object.keys(rectsData).length === 0) {
+                    alert('Нет выделенных областей для символов');
+                    return;
+                }
+
+                const imageBlob = await fetch(originalImage.src).then(r => r.blob());
+
+                const formData = new FormData();
+                formData.append('sprite', imageBlob, 'sprite.png');
+                formData.append('chars', JSON.stringify(Object.keys(rectsData)));
+                formData.append('rects', JSON.stringify(rectsData));
+                formData.append('fontname', fontname);
+                formData.append('threshold', thresholdSlider.value);
+                formData.append('turdsize', turdsizeInput.value);
+                formData.append('monospaced', monospacedSelect.value);
+                formData.append('outWidth', outputSize.w);
+                formData.append('outHeight', outputSize.h);
+
+                const btn = document.getElementById('exportTtfBtn');
+                const originalText = btn.innerText;
+                btn.innerText = '⌛ ГЕНЕРАЦИЯ...';
+                btn.disabled = true;
+
+                try {
+                    const response = await fetch('/convert', { method: 'POST', body: formData });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Ошибка сервера');
+                    }
+                    const blob = await response.blob();
+                    saveAs(blob, fontname + '.ttf');
+                    showToast('✅ TTF успешно создан');
+                } catch (err) {
+                    alert('Ошибка: ' + err.message);
+                } finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            });
+
+            // Инициализация
+            renderCharList();
+            updateInfo();
+            thresholdValue.textContent = thresholdSlider.value;
+            document.getElementById('previewGlyph').width = outputSize.w;
+            document.getElementById('previewGlyph').height = outputSize.h;
+
+            // Пытаемся загрузить сохранённое состояние
+            if (!loadFromLocalStorage()) {
+                // Ничего не сохранено — показываем приветственный тост
+                showToast('👋 Добро пожаловать! Начните с загрузки спрайта', 4000);
+            }
+        })();
+    </script>
+</body>
+</html>
