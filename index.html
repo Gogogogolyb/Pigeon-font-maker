@@ -41,6 +41,11 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            animation: containerAppear 0.3s steps(3) forwards;
+        }
+        @keyframes containerAppear {
+            0% { opacity: 0; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
         }
         .pixel-header {
             background: #2d2d2d;
@@ -52,10 +57,19 @@
             align-items: center;
             justify-content: space-between;
             gap: 8px;
+            transition: all 0.2s steps(3);
+        }
+        .pixel-header:hover {
+            border-color: #808080;
+            box-shadow: 0 0 0 2px #4a4a4a;
         }
         .header-text h1 {
             font-size: clamp(14px, 4vw, 20px);
             color: #ffd966;
+            transition: color 0.2s;
+        }
+        .header-text h1:hover {
+            color: #ffe58a;
         }
         .header-text p {
             font-family: 'VT323', monospace;
@@ -75,7 +89,12 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            transition: 0.1s;
+            transition: all 0.1s steps(3);
+        }
+        .mobile-menu-toggle:hover {
+            background: #d0d0d0;
+            transform: translate(-1px, -1px);
+            box-shadow: -3px -3px 0 #404040, 3px 3px 0 #e0e0e0;
         }
         .mobile-menu-toggle:active {
             box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
@@ -94,7 +113,7 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s steps(4), opacity 0.2s;
         }
         @media (max-width: 800px) {
             .pixel-sidebar {
@@ -109,6 +128,7 @@
                 background: #a0a0a0;
                 border-right: 3px solid #404040;
                 padding-bottom: 30px;
+                transition: transform 0.3s steps(4);
             }
             .pixel-sidebar.open {
                 transform: translateX(0);
@@ -119,6 +139,7 @@
                 top: 0; left: 0; right: 0; bottom: 0;
                 background: rgba(0,0,0,0.5);
                 z-index: 999;
+                animation: fadeIn 0.2s steps(3);
             }
             .pixel-canvas-area {
                 width: 100%;
@@ -142,11 +163,20 @@
                 font-size: 24px;
             }
         }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
         .pixel-card {
             background: #c2c2c2;
             border: 2px solid #707070;
             padding: 12px;
             box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #e0e0e0;
+            transition: all 0.2s steps(3);
+        }
+        .pixel-card:hover {
+            border-color: #808080;
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
         }
         .pixel-card h3 {
             font-family: 'Press Start 2P', cursive;
@@ -157,6 +187,10 @@
             gap: 6px;
             border-bottom: 2px solid #808080;
             padding-bottom: 4px;
+            transition: border-color 0.2s;
+        }
+        .pixel-card:hover h3 {
+            border-color: #a0a0a0;
         }
         .pixel-input, .pixel-select {
             background: #b0b0b0;
@@ -167,11 +201,16 @@
             color: #202020;
             width: 100%;
             box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
+            transition: all 0.15s steps(3);
         }
         .pixel-input:focus, .pixel-select:focus {
             outline: none;
             background: #c0c0c0;
             border-color: #ffcc00;
+            box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #ffcc00;
+        }
+        .pixel-input:hover, .pixel-select:hover {
+            background: #c0c0c0;
         }
         .pixel-button {
             background: #d0d0d0;
@@ -182,13 +221,18 @@
             color: #202020;
             cursor: pointer;
             box-shadow: -2px -2px 0 #404040, 2px 2px 0 #e0e0e0;
-            transition: 0.08s;
+            transition: all 0.1s steps(3);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
             min-height: 44px;
             touch-action: manipulation;
+        }
+        .pixel-button:hover {
+            background: #e0e0e0;
+            transform: translate(-1px, -1px);
+            box-shadow: -3px -3px 0 #404040, 3px 3px 0 #e0e0e0;
         }
         .pixel-button:active {
             box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
@@ -197,10 +241,23 @@
         .pixel-button.primary {
             background: #8ab8ff;
             border-color: #4060c0;
+            animation: pulse 2s infinite;
+        }
+        .pixel-button.primary:hover {
+            background: #9ac8ff;
+            animation: none;
+        }
+        @keyframes pulse {
+            0% { box-shadow: -2px -2px 0 #404040, 2px 2px 0 #e0e0e0; }
+            50% { box-shadow: -2px -2px 0 #404040, 2px 2px 0 #ffffa0; }
+            100% { box-shadow: -2px -2px 0 #404040, 2px 2px 0 #e0e0e0; }
         }
         .pixel-button.danger {
             background: #ffa07a;
             border-color: #c04040;
+        }
+        .pixel-button.danger:hover {
+            background: #ffb08a;
         }
         .char-list {
             max-height: 160px;
@@ -219,21 +276,32 @@
             border-bottom: 1px solid #808080;
             cursor: pointer;
             font-size: 20px;
-            transition: background 0.1s;
+            transition: background 0.1s steps(3), transform 0.1s;
             touch-action: manipulation;
+            animation: charAppear 0.2s steps(3) forwards;
+        }
+        @keyframes charAppear {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
         }
         .char-item.selected {
             background: #ffe570;
             font-weight: bold;
+            transform: scale(1.02);
         }
         .char-item:active {
             background: #d0d0d0;
+            transform: scale(0.98);
         }
         .char-badge {
             background: #404040;
             color: #e0e0e0;
             padding: 4px 8px;
             font-size: 13px;
+            transition: all 0.1s;
+        }
+        .char-item:hover .char-badge {
+            background: #505050;
         }
         .pixel-canvas-area {
             flex: 1;
@@ -243,6 +311,7 @@
             padding: 12px;
             display: flex;
             flex-direction: column;
+            transition: all 0.2s steps(3);
         }
         .canvas-wrapper {
             width: 100%;
@@ -253,15 +322,20 @@
             box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #c0c0c0;
             cursor: default;
             -webkit-overflow-scrolling: touch;
+            transition: border-color 0.2s;
         }
         .canvas-wrapper.panning {
             cursor: grabbing;
+        }
+        .canvas-wrapper:hover {
+            border-color: #707070;
         }
         #imageCanvas {
             display: block;
             image-rendering: crisp-edges;
             image-rendering: pixelated;
             touch-action: none;
+            transition: transform 0.1s steps(3); /* для зума */
         }
         .zoom-bar {
             display: flex;
@@ -274,6 +348,7 @@
             height: 48px;
             font-size: 22px;
             padding: 0;
+            transition: all 0.1s steps(3);
         }
         .zoom-bar span {
             font-size: 18px;
@@ -281,6 +356,10 @@
             padding: 8px 16px;
             border: 2px solid #606060;
             box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #e0e0e0;
+            transition: all 0.2s;
+        }
+        .zoom-bar span:hover {
+            background: #c0c0c0;
         }
         .preview-panel {
             background: #b8b8b8;
@@ -288,6 +367,10 @@
             padding: 12px;
             box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
             margin-top: 12px;
+            transition: all 0.2s steps(3);
+        }
+        .preview-panel:hover {
+            border-color: #808080;
         }
         .preview-panel h3 {
             font-family: 'Press Start 2P', cursive;
@@ -308,14 +391,24 @@
             background: #a0a0a0;
             padding: 8px;
             border: 2px solid #606060;
+            transition: all 0.2s;
+        }
+        .preview-cell:hover {
+            border-color: #808080;
+            transform: scale(1.02);
         }
         .preview-cell canvas {
             background: #909090;
             border: 1px solid #404040;
+            transition: all 0.2s;
         }
         .preview-label {
             font-size: 14px;
             margin-top: 4px;
+            transition: color 0.2s;
+        }
+        .preview-cell:hover .preview-label {
+            color: #404040;
         }
         .text-preview {
             background: #a0a0a0;
@@ -327,6 +420,10 @@
             overflow-x: auto;
             box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
             -webkit-overflow-scrolling: touch;
+            transition: all 0.2s;
+        }
+        .text-preview:hover {
+            border-color: #808080;
         }
         .toast {
             position: fixed;
@@ -341,11 +438,13 @@
             box-shadow: 6px 6px 0 #202020;
             z-index: 10000;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s steps(3), transform 0.2s steps(3);
             pointer-events: none;
+            transform: translateX(20px);
         }
         .toast.show {
             opacity: 1;
+            transform: translateX(0);
         }
     </style>
 </head>
@@ -1008,7 +1107,7 @@
                         temp.height = rect.height;
                         const tctx = temp.getContext('2d');
                         tctx.drawImage(originalImage, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
-                        ctx.drawImage(temp, x, baseline - rect.height + 5); // примерное позиционирование
+                        ctx.drawImage(temp, x, baseline - rect.height + 5);
                         x += rect.width + 2;
                     } else {
                         ctx.fillStyle = '#ff6060';
