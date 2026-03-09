@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
+        /* Стили (те же, что в последней версии) */
         * {
             margin: 0;
             padding: 0;
@@ -1063,7 +1064,6 @@
                 const delta = e.deltaY > 0 ? -0.2 : 0.2;
                 zoom = Math.max(0.2, Math.min(20, oldZoom + delta));
                 const scaleFactor = zoom / oldZoom;
-                // Новые позиции прокрутки, чтобы точка под курсором осталась на месте
                 const newScrollLeft = (mouseX + wrapper.scrollLeft) * scaleFactor - mouseX;
                 const newScrollTop = (mouseY + wrapper.scrollTop) * scaleFactor - mouseY;
                 resizeCanvas();
@@ -1077,7 +1077,6 @@
                 const oldZoom = zoom;
                 zoom = Math.min(20, zoom + 0.2);
                 const scaleFactor = zoom / oldZoom;
-                // При клике центруем по центру видимой области
                 const centerX = wrapper.clientWidth / 2;
                 const centerY = wrapper.clientHeight / 2;
                 const newScrollLeft = (centerX + wrapper.scrollLeft) * scaleFactor - centerX;
@@ -1452,14 +1451,15 @@
                 }
             });
 
+            // ИСПРАВЛЕННЫЙ ОБРАБОТЧИК ЭКСПОРТА
             document.getElementById('exportTtfBtn').addEventListener('click', async () => {
-                if (!originalImage || Object.keys(charRects).length===0) return alert('Загрузите изображение и выделите символы');
+                if (!originalImage || Object.keys(charRects).length === 0) return alert('Загрузите изображение и выделите символы');
                 const fontname = fontNameInput.value.trim() || 'PixelFont';
                 const rectsData = {};
                 for (let [ch, rect] of Object.entries(charRects)) if (rect) rectsData[ch] = rect;
-                if (Object.keys(rectsData).length===0) return alert('Нет выделенных областей');
+                if (Object.keys(rectsData).length === 0) return alert('Нет выделенных областей');
 
-                const imageBlob = await fetch(originalImage.src).then(r=>r.blob());
+                const imageBlob = await fetch(originalImage.src).then(r => r.blob());
                 const formData = new FormData();
                 formData.append('sprite', imageBlob, 'sprite.png');
                 formData.append('chars', JSON.stringify(Object.keys(rectsData)));
@@ -1477,10 +1477,23 @@
 
                 const btn = document.getElementById('exportTtfBtn');
                 const orig = btn.innerText;
-                btn.innerText = '⌛ ГЕНЕРАЦИЯ...'; btn.disabled = true;
+                btn.innerText = '⌛ ГЕНЕРАЦИЯ...';
+                btn.disabled = true;
+
                 try {
-                    const resp = await fetch('/convert', { method:'POST', body:formData });
-                    if (!resp.ok) throw new Error((await resp.json()).error || 'Ошибка');
+                    const resp = await fetch('/convert', { method: 'POST', body: formData });
+                    if (!resp.ok) {
+                        let errorMsg = 'Ошибка сервера';
+                        const contentType = resp.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const errData = await resp.json();
+                            errorMsg = errData.error || errorMsg;
+                        } else {
+                            // Если не JSON, читаем как текст (например, HTML страница ошибки)
+                            errorMsg = await resp.text() || errorMsg;
+                        }
+                        throw new Error(errorMsg);
+                    }
                     const blob = await resp.blob();
                     const disposition = resp.headers.get('Content-Disposition') || '';
                     let filename = fontname;
@@ -1489,8 +1502,12 @@
                     else filename += '.ttf';
                     saveAs(blob, filename);
                     showToast('✅ Шрифт готов');
-                } catch (err) { alert('Ошибка: '+err.message); }
-                finally { btn.innerText = orig; btn.disabled = false; }
+                } catch (err) {
+                    alert('Ошибка: ' + err.message);
+                } finally {
+                    btn.innerText = orig;
+                    btn.disabled = false;
+                }
             });
 
             renderCharList();
