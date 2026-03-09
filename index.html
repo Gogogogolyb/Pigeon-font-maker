@@ -105,6 +105,7 @@
         }
         .pixel-sidebar {
             width: 340px;
+            max-width: 100%;
             background: #a0a0a0;
             border: 3px solid #606060;
             padding: 12px;
@@ -159,6 +160,20 @@
             .char-item {
                 padding: 14px 12px;
                 font-size: 24px;
+            }
+        }
+        @media (min-width: 1400px) {
+            .pixel-sidebar {
+                width: 380px;
+            }
+        }
+        @media (orientation: landscape) and (max-height: 600px) {
+            .canvas-wrapper {
+                height: 250px !important;
+            }
+            .pixel-sidebar {
+                padding: 8px;
+                gap: 8px;
             }
         }
         @keyframes fadeIn {
@@ -359,7 +374,6 @@
         .zoom-bar span:hover {
             background: #c0c0c0;
         }
-        /* Переработанный предпросмотр */
         .preview-panel {
             background: #b8b8b8;
             border: 2px solid #707070;
@@ -396,7 +410,6 @@
             padding: 4px 8px;
             border: 1px solid #606060;
         }
-        /* Галерея символов */
         .preview-gallery {
             display: flex;
             flex-wrap: wrap;
@@ -464,6 +477,7 @@
             border: 2px solid #606060;
             padding: 8px;
             box-shadow: inset -2px -2px 0 #404040, inset 2px 2px 0 #e0e0e0;
+            overflow-x: auto;
         }
         .text-preview {
             background: #a0a0a0;
@@ -478,6 +492,8 @@
             position: fixed;
             top: 20px;
             right: 20px;
+            left: auto;
+            max-width: calc(100% - 40px);
             background: #2d2d2d;
             color: #ffd966;
             border: 2px solid #a0a0a0;
@@ -494,6 +510,13 @@
         .toast.show {
             opacity: 1;
             transform: translateX(0);
+        }
+        @media (max-width: 600px) {
+            .toast {
+                left: 20px;
+                right: 20px;
+                text-align: center;
+            }
         }
     </style>
 </head>
@@ -528,7 +551,7 @@
 
                 <div class="pixel-card">
                     <h3><span>⚙️</span> 3. Настройки символов</h3>
-                    <label>🌓 Порог яркости:</label>
+                    <label>🌓 Порог яркости (0-255):</label>
                     <input type="range" id="thresholdSlider" min="0" max="255" value="128" style="width:100%;">
                     <div style="display: flex; justify-content: space-between; margin-bottom:8px;">
                         <span>0</span><span id="thresholdValue">128</span><span>255</span>
@@ -543,18 +566,16 @@
                 </div>
 
                 <div class="pixel-card">
-                    <h3><span>📐</span> 4. Размер и интервалы</h3>
-                    <label>🖼️ Размер глифа (px):</label>
-                    <div style="display: flex; gap: 6px;">
-                        <input type="number" id="outWidth" value="64" min="8" class="pixel-input">
-                        <span style="font-size:20px;">x</span>
-                        <input type="number" id="outHeight" value="64" min="8" class="pixel-input">
-                    </div>
-                    <label>📏 Межстрочный интервал (line height):</label>
+                    <h3><span>📐</span> 4. Размер и интервалы (в пикселях)</h3>
+                    <label>🖼️ Ширина глифа (px):</label>
+                    <input type="number" id="outWidth" value="64" min="8" class="pixel-input">
+                    <label>🖼️ Высота глифа (px):</label>
+                    <input type="number" id="outHeight" value="64" min="8" class="pixel-input">
+                    <label>📏 Межстрочный интервал (px):</label>
                     <input type="number" id="lineHeight" value="64" min="8" class="pixel-input">
-                    <label>⬇️ Смещение базовой линии (baseline):</label>
+                    <label>⬇️ Смещение базовой линии (px):</label>
                     <input type="number" id="baseline" value="48" min="0" class="pixel-input">
-                    <label>↔️ Межбуквенный интервал (tracking):</label>
+                    <label>↔️ Межбуквенный интервал (px):</label>
                     <input type="number" id="tracking" value="2" min="0" max="20" class="pixel-input">
                     <button class="pixel-button" id="setSizeBtn" style="width:100%; margin-top:6px;">Применить</button>
                 </div>
@@ -604,7 +625,7 @@
                         <label>🔎 Масштаб:</label>
                         <input type="range" id="previewScaleSlider" min="1" max="8" value="2" step="0.5">
                         <span id="previewScaleValue">2x</span>
-                        <label>↔️ Трекинг:</label>
+                        <label>↔️ Трекинг (px):</label>
                         <input type="range" id="previewTracking" min="0" max="20" value="2" step="1">
                         <span id="previewTrackingValue">2</span>
                     </div>
@@ -654,7 +675,7 @@
             let outputSize = { w: 64, h: 64 };
             let lineHeight = 64;
             let baseline = 48;
-            let tracking = 2; // межбуквенный интервал
+            let tracking = 2; // межбуквенный интервал в пикселях
             let previewScale = 2.0;
 
             let isDrawing = false;
@@ -1032,23 +1053,64 @@
                 if (e.code === 'Space') { spacePressed = false; wrapper.style.cursor = 'default'; e.preventDefault(); }
             });
 
+            // Улучшенный зум с центровкой по курсору
             canvas.addEventListener('wheel', (e) => {
                 e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                const oldZoom = zoom;
                 const delta = e.deltaY > 0 ? -0.2 : 0.2;
-                zoom = Math.max(0.2, Math.min(20, zoom + delta));
+                zoom = Math.max(0.2, Math.min(20, oldZoom + delta));
+                const scaleFactor = zoom / oldZoom;
+                // Новые позиции прокрутки, чтобы точка под курсором осталась на месте
+                const newScrollLeft = (mouseX + wrapper.scrollLeft) * scaleFactor - mouseX;
+                const newScrollTop = (mouseY + wrapper.scrollTop) * scaleFactor - mouseY;
                 resizeCanvas();
+                wrapper.scrollLeft = newScrollLeft;
+                wrapper.scrollTop = newScrollTop;
                 document.getElementById('zoomPercent').innerText = Math.round(zoom*100)+'%';
                 saveToLocalStorage();
             });
 
             document.getElementById('zoomInBtn').addEventListener('click', () => {
-                zoom = Math.min(20, zoom+0.2); resizeCanvas(); document.getElementById('zoomPercent').innerText = Math.round(zoom*100)+'%'; saveToLocalStorage();
+                const oldZoom = zoom;
+                zoom = Math.min(20, zoom + 0.2);
+                const scaleFactor = zoom / oldZoom;
+                // При клике центруем по центру видимой области
+                const centerX = wrapper.clientWidth / 2;
+                const centerY = wrapper.clientHeight / 2;
+                const newScrollLeft = (centerX + wrapper.scrollLeft) * scaleFactor - centerX;
+                const newScrollTop = (centerY + wrapper.scrollTop) * scaleFactor - centerY;
+                resizeCanvas();
+                wrapper.scrollLeft = newScrollLeft;
+                wrapper.scrollTop = newScrollTop;
+                document.getElementById('zoomPercent').innerText = Math.round(zoom*100)+'%';
+                saveToLocalStorage();
             });
+
             document.getElementById('zoomOutBtn').addEventListener('click', () => {
-                zoom = Math.max(0.2, zoom-0.2); resizeCanvas(); document.getElementById('zoomPercent').innerText = Math.round(zoom*100)+'%'; saveToLocalStorage();
+                const oldZoom = zoom;
+                zoom = Math.max(0.2, zoom - 0.2);
+                const scaleFactor = zoom / oldZoom;
+                const centerX = wrapper.clientWidth / 2;
+                const centerY = wrapper.clientHeight / 2;
+                const newScrollLeft = (centerX + wrapper.scrollLeft) * scaleFactor - centerX;
+                const newScrollTop = (centerY + wrapper.scrollTop) * scaleFactor - centerY;
+                resizeCanvas();
+                wrapper.scrollLeft = newScrollLeft;
+                wrapper.scrollTop = newScrollTop;
+                document.getElementById('zoomPercent').innerText = Math.round(zoom*100)+'%';
+                saveToLocalStorage();
             });
+
             document.getElementById('resetZoomBtn').addEventListener('click', () => {
-                zoom = 1.0; resizeCanvas(); document.getElementById('zoomPercent').innerText = '100%'; saveToLocalStorage();
+                zoom = 1.0;
+                resizeCanvas();
+                wrapper.scrollLeft = 0;
+                wrapper.scrollTop = 0;
+                document.getElementById('zoomPercent').innerText = '100%';
+                saveToLocalStorage();
             });
 
             document.getElementById('imageUpload').addEventListener('change', (e) => {
@@ -1113,13 +1175,12 @@
                 }
             }
 
-            // Новая функция: обновление галереи предпросмотра
             function updateGallery() {
                 const gallery = document.getElementById('previewGallery');
                 gallery.innerHTML = '';
                 const sorted = Object.keys(charRects).sort();
                 for (let ch of sorted) {
-                    if (!charRects[ch]) continue; // показываем только выделенные
+                    if (!charRects[ch]) continue;
                     const rect = charRects[ch];
                     const item = document.createElement('div');
                     item.className = 'preview-gallery-item' + (selectedChar === ch ? ' selected' : '');
@@ -1129,7 +1190,6 @@
                     const ctx = canvas.getContext('2d');
                     ctx.imageSmoothingEnabled = false;
                     ctx.drawImage(originalImage, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
-                    // Масштабируем отображение
                     canvas.style.width = '40px';
                     canvas.style.height = '40px';
                     item.appendChild(canvas);
@@ -1208,7 +1268,7 @@
                     return;
                 }
                 const rect = charRects[selectedChar];
-                const scale = 8; // внутренний масштаб для пиксельной сетки
+                const scale = 8;
                 const pixelDiv = document.getElementById('previewPixel');
                 pixelDiv.innerHTML = '';
                 const pixelCanvas = document.createElement('canvas');
@@ -1251,7 +1311,6 @@
                 const text = previewTextInput.value;
                 const container = document.querySelector('#textPreviewCanvas .text-preview');
                 container.innerHTML = '';
-                // Разбиваем на строки
                 const lines = text.split('\n');
                 const canvasHeight = lines.length * lineHeight + 20;
                 const canvas = document.createElement('canvas');
