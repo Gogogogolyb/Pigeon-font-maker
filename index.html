@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>pigeon font maker</title>
-    <!-- Пиксельные шрифты -->
     <link href="https://fonts.googleapis.com/css?family=Press+Start+2P|VT323&display=swap" rel="stylesheet">
-    <!-- JSZip и FileSaver -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
@@ -335,7 +333,7 @@
             image-rendering: crisp-edges;
             image-rendering: pixelated;
             touch-action: none;
-            transition: transform 0.1s steps(3); /* для зума */
+            transition: transform 0.1s steps(3);
         }
         .zoom-bar {
             display: flex;
@@ -380,6 +378,26 @@
             align-items: center;
             gap: 6px;
         }
+        .preview-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .preview-controls label {
+            font-size: 16px;
+            white-space: nowrap;
+        }
+        .preview-controls input[type=range] {
+            flex: 1;
+            max-width: 200px;
+        }
+        .preview-controls span {
+            font-size: 16px;
+            background: #a0a0a0;
+            padding: 4px 8px;
+            border: 1px solid #606060;
+        }
         .preview-row {
             display: flex;
             flex-wrap: wrap;
@@ -401,6 +419,8 @@
             background: #909090;
             border: 1px solid #404040;
             transition: all 0.2s;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
         }
         .preview-label {
             font-size: 14px;
@@ -546,13 +566,21 @@
 
                 <div class="preview-panel">
                     <h3><span>🔍</span> ПРЕДПРОСМОТР</h3>
+                    
+                    <!-- Ползунок масштаба предпросмотра -->
+                    <div class="preview-controls">
+                        <label>🔎 Масштаб:</label>
+                        <input type="range" id="previewScaleSlider" min="1" max="8" value="2" step="0.5">
+                        <span id="previewScaleValue">2x</span>
+                    </div>
+
                     <div class="preview-row">
                         <div class="preview-cell">
                             <div id="previewPixel"></div>
                             <div class="preview-label">пиксели</div>
                         </div>
                         <div class="preview-cell">
-                            <canvas id="previewGlyph" width="64" height="64" style="width:64px; height:64px;"></canvas>
+                            <canvas id="previewGlyph" width="64" height="64"></canvas>
                             <div class="preview-label">глиф</div>
                         </div>
                     </div>
@@ -581,8 +609,10 @@
             let charRects = {};
             let selectedChar = null;
             let outputSize = { w: 64, h: 64 };
-            let lineHeight = 64;        // межстрочный интервал
-            let baseline = 48;           // смещение базовой линии от верха
+            let lineHeight = 64;
+            let baseline = 48;
+            let previewScale = 2.0; // масштаб для preview (по умолчанию 2x)
+
             let isDrawing = false;
             let startX = 0, startY = 0;
             let currentRect = null;
@@ -603,8 +633,18 @@
             const baselineInput = document.getElementById('baseline');
             const previewTextInput = document.getElementById('previewText');
             const exportFormatSelect = document.getElementById('exportFormat');
+            const previewScaleSlider = document.getElementById('previewScaleSlider');
+            const previewScaleValue = document.getElementById('previewScaleValue');
 
             canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+
+            // Обновление масштаба предпросмотра
+            previewScaleSlider.addEventListener('input', () => {
+                previewScale = parseFloat(previewScaleSlider.value);
+                previewScaleValue.textContent = previewScale + 'x';
+                updatePreviews();
+                updateTextPreview();
+            });
 
             function showToast(msg, duration=3000) {
                 toastEl.textContent = msg;
@@ -623,7 +663,8 @@
                         monospaced: monospacedSelect.value,
                         fontName: fontNameInput.value,
                         previewText: previewTextInput.value,
-                        zoom
+                        zoom,
+                        previewScale
                     };
                     localStorage.setItem('pigeonFontMaker', JSON.stringify(state));
                 } catch (e) {}
@@ -650,11 +691,14 @@
                             fontNameInput.value = state.fontName || 'PixelFont';
                             previewTextInput.value = state.previewText || 'ABC 123';
                             zoom = state.zoom || 1.0;
+                            previewScale = state.previewScale || 2.0;
 
                             outWidthInput.value = outputSize.w;
                             outHeightInput.value = outputSize.h;
                             lineHeightInput.value = lineHeight;
                             baselineInput.value = baseline;
+                            previewScaleSlider.value = previewScale;
+                            previewScaleValue.textContent = previewScale + 'x';
                             thresholdValue.textContent = thresholdSlider.value;
 
                             resizeCanvas();
@@ -1050,17 +1094,18 @@
                     return;
                 }
                 const rect = charRects[selectedChar];
-                const scale = 8;
+                const scale = 8; // внутренний масштаб для пиксельной сетки
                 const pixelDiv = document.getElementById('previewPixel');
                 pixelDiv.innerHTML = '';
                 const pixelCanvas = document.createElement('canvas');
                 pixelCanvas.width = rect.width * scale;
                 pixelCanvas.height = rect.height * scale;
-                pixelCanvas.style.width = (rect.width*scale)+'px';
-                pixelCanvas.style.height = (rect.height*scale)+'px';
+                // Применяем дополнительный масштаб previewScale через CSS
+                pixelCanvas.style.width = (rect.width * scale * previewScale) + 'px';
+                pixelCanvas.style.height = (rect.height * scale * previewScale) + 'px';
                 const pctx = pixelCanvas.getContext('2d');
                 pctx.imageSmoothingEnabled = false;
-                pctx.drawImage(originalImage, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width*scale, rect.height*scale);
+                pctx.drawImage(originalImage, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width * scale, rect.height * scale);
                 pctx.strokeStyle = '#404040';
                 pctx.lineWidth = 1;
                 for (let i=0; i<=rect.width; i++) {
@@ -1074,6 +1119,8 @@
                 const glyphCanvas = document.getElementById('previewGlyph');
                 glyphCanvas.width = outputSize.w;
                 glyphCanvas.height = outputSize.h;
+                glyphCanvas.style.width = (outputSize.w * previewScale) + 'px';
+                glyphCanvas.style.height = (outputSize.h * previewScale) + 'px';
                 const gctx = glyphCanvas.getContext('2d');
                 gctx.clearRect(0,0,outputSize.w,outputSize.h);
                 gctx.imageSmoothingEnabled = false;
@@ -1091,9 +1138,13 @@
                 const text = previewTextInput.value;
                 const container = document.getElementById('textPreviewCanvas');
                 container.innerHTML = '';
+                // Масштабируем холст предпросмотра текста
                 const canvas = document.createElement('canvas');
                 canvas.width = 800;
                 canvas.height = lineHeight + 20;
+                canvas.style.width = (800 * previewScale) + 'px';
+                canvas.style.height = ((lineHeight + 20) * previewScale) + 'px';
+                canvas.style.imageRendering = 'pixelated';
                 const ctx = canvas.getContext('2d');
                 ctx.imageSmoothingEnabled = false;
                 ctx.fillStyle = '#a0a0a0';
@@ -1149,7 +1200,8 @@
                     lineHeight, baseline,
                     threshold: thresholdSlider.value,
                     turdsize: turdsizeInput.value,
-                    monospaced: monospacedSelect.value
+                    monospaced: monospacedSelect.value,
+                    previewScale
                 };
                 saveAs(new Blob([JSON.stringify(config,null,2)], {type:'application/json'}), 'pigeon_font_config.json');
             });
@@ -1182,6 +1234,11 @@
                                     if (config.threshold) thresholdSlider.value = config.threshold;
                                     if (config.turdsize) turdsizeInput.value = config.turdsize;
                                     if (config.monospaced) monospacedSelect.value = config.monospaced;
+                                    if (config.previewScale) {
+                                        previewScale = config.previewScale;
+                                        previewScaleSlider.value = previewScale;
+                                        previewScaleValue.textContent = previewScale + 'x';
+                                    }
                                     thresholdValue.textContent = thresholdSlider.value;
                                     selectedChar = null;
                                     renderCharList();
