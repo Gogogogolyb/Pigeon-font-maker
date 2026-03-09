@@ -175,7 +175,7 @@ def convert():
 
 @app.route('/')
 def index():
-    return send_file('static/index.html')
+    return send_file('index.html')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
