@@ -86,9 +86,8 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-        /* Левая панель - мобильная оптимизация */
         .pixel-sidebar {
-            width: 320px;
+            width: 340px;
             background: #a0a0a0;
             border: 3px solid #606060;
             padding: 12px;
@@ -97,7 +96,6 @@
             gap: 16px;
             transition: transform 0.3s ease;
         }
-        /* Мобильные стили */
         @media (max-width: 800px) {
             .pixel-sidebar {
                 position: fixed;
@@ -135,7 +133,6 @@
             .preview-row {
                 justify-content: center;
             }
-            /* Увеличиваем область касания для кнопок */
             .pixel-button {
                 min-height: 48px;
                 font-size: 14px;
@@ -145,7 +142,6 @@
                 font-size: 24px;
             }
         }
-
         .pixel-card {
             background: #c2c2c2;
             border: 2px solid #707070;
@@ -383,34 +379,48 @@
                 </div>
 
                 <div class="pixel-card">
-                    <h3><span>⚙️</span> 3. Настройки</h3>
-                    <label>🌓 Порог:</label>
+                    <h3><span>⚙️</span> 3. Настройки символов</h3>
+                    <label>🌓 Порог яркости:</label>
                     <input type="range" id="thresholdSlider" min="0" max="255" value="128" style="width:100%;">
                     <div style="display: flex; justify-content: space-between; margin-bottom:8px;">
                         <span>0</span><span id="thresholdValue">128</span><span>255</span>
                     </div>
-                    <label>🧹 Шум (turdsize):</label>
+                    <label>🧹 Удаление шумов (turdsize):</label>
                     <input type="number" id="turdsize" min="0" max="20" value="2" class="pixel-input">
                     <label>📏 Моноширинный:</label>
                     <select id="monospaced" class="pixel-select">
                         <option value="auto">Авто</option>
                         <option value="fixed">Фиксированный</option>
                     </select>
-                    <label>📐 Размер глифа:</label>
+                </div>
+
+                <div class="pixel-card">
+                    <h3><span>📐</span> 4. Размер и интервалы</h3>
+                    <label>🖼️ Размер глифа (px):</label>
                     <div style="display: flex; gap: 6px;">
                         <input type="number" id="outWidth" value="64" min="8" class="pixel-input">
                         <span style="font-size:20px;">x</span>
                         <input type="number" id="outHeight" value="64" min="8" class="pixel-input">
                     </div>
+                    <label>📏 Межстрочный интервал (line height):</label>
+                    <input type="number" id="lineHeight" value="64" min="8" class="pixel-input">
+                    <label>⬇️ Смещение базовой линии (baseline):</label>
+                    <input type="number" id="baseline" value="48" min="0" class="pixel-input">
                     <button class="pixel-button" id="setSizeBtn" style="width:100%; margin-top:6px;">Применить</button>
                 </div>
 
                 <div class="pixel-card">
-                    <h3><span>💾</span> 4. Экспорт</h3>
-                    <label>🏷️ Имя:</label>
+                    <h3><span>💾</span> 5. Экспорт</h3>
+                    <label>🏷️ Имя шрифта:</label>
                     <input type="text" id="fontName" value="PixelFont" class="pixel-input">
+                    <label>📦 Формат:</label>
+                    <select id="exportFormat" class="pixel-select">
+                        <option value="ttf">TTF</option>
+                        <option value="woff2">WOFF2</option>
+                        <option value="both">TTF + WOFF2 (ZIP)</option>
+                    </select>
                     <div style="display: flex; gap: 6px; margin: 10px 0;">
-                        <button class="pixel-button primary" id="exportTtfBtn" style="flex:2;">✨ TTF</button>
+                        <button class="pixel-button primary" id="exportTtfBtn" style="flex:2;">✨ Создать</button>
                         <button class="pixel-button" id="saveConfigBtn">💾</button>
                         <button class="pixel-button" id="loadConfigBtn">📂</button>
                     </div>
@@ -448,7 +458,7 @@
                         </div>
                     </div>
                     <div style="margin-top:10px;">
-                        <label>🔡 Тест:</label>
+                        <label>🔡 Тестовая строка:</label>
                         <input type="text" id="previewText" value="ABC 123" class="pixel-input" style="margin:4px 0;">
                         <div id="textPreviewCanvas" class="text-preview"></div>
                     </div>
@@ -472,6 +482,8 @@
             let charRects = {};
             let selectedChar = null;
             let outputSize = { w: 64, h: 64 };
+            let lineHeight = 64;        // межстрочный интервал
+            let baseline = 48;           // смещение базовой линии от верха
             let isDrawing = false;
             let startX = 0, startY = 0;
             let currentRect = null;
@@ -488,12 +500,12 @@
             const fontNameInput = document.getElementById('fontName');
             const outWidthInput = document.getElementById('outWidth');
             const outHeightInput = document.getElementById('outHeight');
+            const lineHeightInput = document.getElementById('lineHeight');
+            const baselineInput = document.getElementById('baseline');
             const previewTextInput = document.getElementById('previewText');
+            const exportFormatSelect = document.getElementById('exportFormat');
 
-            // Предотвращаем скролл страницы при касаниях холста
-            canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-            }, { passive: false });
+            canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 
             function showToast(msg, duration=3000) {
                 toastEl.textContent = msg;
@@ -506,6 +518,7 @@
                     const state = {
                         image: originalImage ? originalImage.src : null,
                         charRects, outputSize, selectedChar,
+                        lineHeight, baseline,
                         threshold: thresholdSlider.value,
                         turdsize: turdsizeInput.value,
                         monospaced: monospacedSelect.value,
@@ -529,6 +542,8 @@
                             imageLoaded = true;
                             charRects = state.charRects || {};
                             outputSize = state.outputSize || { w:64, h:64 };
+                            lineHeight = state.lineHeight || 64;
+                            baseline = state.baseline || 48;
                             selectedChar = state.selectedChar || null;
                             thresholdSlider.value = state.threshold || 128;
                             turdsizeInput.value = state.turdsize || 2;
@@ -539,6 +554,8 @@
 
                             outWidthInput.value = outputSize.w;
                             outHeightInput.value = outputSize.h;
+                            lineHeightInput.value = lineHeight;
+                            baselineInput.value = baseline;
                             thresholdValue.textContent = thresholdSlider.value;
 
                             resizeCanvas();
@@ -629,12 +646,7 @@
             function handleTouchStart(e) {
                 e.preventDefault();
                 if (!imageLoaded) return;
-
-                if (e.touches.length === 2) {
-                    // Два пальца - для зума позже можно добавить пинч
-                    return;
-                }
-
+                if (e.touches.length === 2) return;
                 if (e.touches.length === 1) {
                     if (spacePressed) {
                         isPanning = true;
@@ -646,7 +658,6 @@
                         scrollStartTop = wrapper.scrollTop;
                         return;
                     }
-
                     if (selectedChar) {
                         const { imgX, imgY, canvasX, canvasY } = getEventCoords(e);
                         isDrawing = true;
@@ -660,7 +671,6 @@
             function handleTouchMove(e) {
                 e.preventDefault();
                 if (!imageLoaded) return;
-
                 if (isPanning && e.touches.length === 1) {
                     const { canvasX, canvasY } = getEventCoords(e);
                     const dx = canvasX - panStartX;
@@ -669,7 +679,6 @@
                     wrapper.scrollTop = scrollStartTop - dy;
                     return;
                 }
-
                 if (isDrawing && selectedChar && e.touches.length === 1) {
                     const { imgX, imgY } = getEventCoords(e);
                     const currentImgX = Math.round(imgX);
@@ -694,7 +703,6 @@
                     wrapper.classList.remove('panning');
                     return;
                 }
-
                 if (!isDrawing || !selectedChar) return;
                 isDrawing = false;
                 const { imgX, imgY } = getEventCoords(e);
@@ -717,17 +725,14 @@
                 scheduleRedraw();
             }
 
-            // Touch events
             canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
             canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
             canvas.addEventListener('touchend', handleTouchEnd);
             canvas.addEventListener('touchcancel', handleTouchEnd);
 
-            // Mouse events (оставляем для десктопа)
             canvas.addEventListener('mousedown', (e) => {
                 if (!imageLoaded) return;
                 e.preventDefault();
-
                 if (spacePressed || e.button === 1) {
                     isPanning = true;
                     wrapper.classList.add('panning');
@@ -738,7 +743,6 @@
                     scrollStartTop = wrapper.scrollTop;
                     return;
                 }
-
                 if (e.button === 0 && selectedChar) {
                     const { imgX, imgY, canvasX, canvasY } = getEventCoords(e);
                     isDrawing = true;
@@ -751,7 +755,6 @@
             canvas.addEventListener('mousemove', (e) => {
                 if (!imageLoaded) return;
                 e.preventDefault();
-
                 if (isPanning) {
                     const { canvasX, canvasY } = getEventCoords(e);
                     const dx = canvasX - panStartX;
@@ -760,7 +763,6 @@
                     wrapper.scrollTop = scrollStartTop - dy;
                     return;
                 }
-
                 if (!isDrawing || !selectedChar) return;
                 const { imgX, imgY } = getEventCoords(e);
                 const currentImgX = Math.round(imgX);
@@ -920,14 +922,18 @@
             document.getElementById('setSizeBtn').addEventListener('click', () => {
                 const w = parseInt(outWidthInput.value);
                 const h = parseInt(outHeightInput.value);
-                if (w>0 && h>0) {
+                const lh = parseInt(lineHeightInput.value);
+                const bl = parseInt(baselineInput.value);
+                if (w>0 && h>0 && lh>0 && bl>=0) {
                     outputSize = { w, h };
+                    lineHeight = lh;
+                    baseline = bl;
                     document.getElementById('previewGlyph').width = outputSize.w;
                     document.getElementById('previewGlyph').height = outputSize.h;
                     updateInfo();
                     updatePreviews();
                     saveToLocalStorage();
-                } else alert('Некорректный размер');
+                } else alert('Некорректные значения');
             });
 
             function updateInfo() {
@@ -988,7 +994,7 @@
                 container.innerHTML = '';
                 const canvas = document.createElement('canvas');
                 canvas.width = 800;
-                canvas.height = outputSize.h + 20;
+                canvas.height = lineHeight + 20;
                 const ctx = canvas.getContext('2d');
                 ctx.imageSmoothingEnabled = false;
                 ctx.fillStyle = '#a0a0a0';
@@ -1002,7 +1008,7 @@
                         temp.height = rect.height;
                         const tctx = temp.getContext('2d');
                         tctx.drawImage(originalImage, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
-                        ctx.drawImage(temp, x, 10);
+                        ctx.drawImage(temp, x, baseline - rect.height + 5); // примерное позиционирование
                         x += rect.width + 2;
                     } else {
                         ctx.fillStyle = '#ff6060';
@@ -1019,8 +1025,9 @@
             turdsizeInput.addEventListener('input', saveToLocalStorage);
             monospacedSelect.addEventListener('change', saveToLocalStorage);
             fontNameInput.addEventListener('input', saveToLocalStorage);
+            lineHeightInput.addEventListener('input', saveToLocalStorage);
+            baselineInput.addEventListener('input', saveToLocalStorage);
 
-            // Мобильное меню
             const menuToggle = document.getElementById('menuToggle');
             const sidebar = document.getElementById('sidebar');
             const body = document.body;
@@ -1040,6 +1047,7 @@
                 const config = {
                     image: originalImage.src,
                     outputSize, chars: charRects,
+                    lineHeight, baseline,
                     threshold: thresholdSlider.value,
                     turdsize: turdsizeInput.value,
                     monospaced: monospacedSelect.value
@@ -1064,8 +1072,12 @@
                                     resizeCanvas();
                                     charRects = config.chars || {};
                                     outputSize = config.outputSize || {w:64,h:64};
+                                    lineHeight = config.lineHeight || 64;
+                                    baseline = config.baseline || 48;
                                     outWidthInput.value = outputSize.w;
                                     outHeightInput.value = outputSize.h;
+                                    lineHeightInput.value = lineHeight;
+                                    baselineInput.value = baseline;
                                     document.getElementById('previewGlyph').width = outputSize.w;
                                     document.getElementById('previewGlyph').height = outputSize.h;
                                     if (config.threshold) thresholdSlider.value = config.threshold;
@@ -1117,6 +1129,9 @@
                 formData.append('monospaced', monospacedSelect.value);
                 formData.append('outWidth', outputSize.w);
                 formData.append('outHeight', outputSize.h);
+                formData.append('lineHeight', lineHeight);
+                formData.append('baseline', baseline);
+                formData.append('format', exportFormatSelect.value);
 
                 const btn = document.getElementById('exportTtfBtn');
                 const orig = btn.innerText;
@@ -1124,8 +1139,14 @@
                 try {
                     const resp = await fetch('/convert', { method:'POST', body:formData });
                     if (!resp.ok) throw new Error((await resp.json()).error || 'Ошибка');
-                    saveAs(await resp.blob(), fontname+'.ttf');
-                    showToast('✅ TTF готов');
+                    const blob = await resp.blob();
+                    const disposition = resp.headers.get('Content-Disposition') || '';
+                    let filename = fontname;
+                    if (exportFormatSelect.value === 'both') filename += '.zip';
+                    else if (exportFormatSelect.value === 'woff2') filename += '.woff2';
+                    else filename += '.ttf';
+                    saveAs(blob, filename);
+                    showToast('✅ Шрифт готов');
                 } catch (err) { alert('Ошибка: '+err.message); }
                 finally { btn.innerText = orig; btn.disabled = false; }
             });
